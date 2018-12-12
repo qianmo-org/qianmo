@@ -4,39 +4,41 @@
         <div class="login_header">
           <h2 class="login_logo">硅谷外卖</h2>
           <div class="login_header_title">
-            <a href="javascript:;">短信登录</a>
-            <a href="javascript:;" class="on">密码登录</a>
+            <a href="javascript:;" :class="{on:!loginType}" @click="loginType=false">短信登录</a>
+            <a href="javascript:;" :class="{on:loginType}" @click="loginType=true">密码登录</a>
           </div>
         </div>
         <div class="login_content">
-          <form>
-            <div class="on">
+          <form @submit.prevent='login'>
+            <div :class="{on:!loginType}">
               <section class="login_message">
-                <input type="tel" maxlength="11" placeholder="手机号">
-                <button disabled="disabled" class="get_verification">获取验证码</button>
+                <input type="tel" maxlength="11" placeholder="手机号" v-model="phone">
+                <button :disabled="!phonebl" class="get_verification" :class='{phoneBl:phonebl}' @click.prevent="getCode">
+                  {{codeTime>0 ? `已发送${codeTime}s`:'获取验证码'}}</button>
               </section>
               <section class="login_verification">
-                <input type="tel" maxlength="8" placeholder="验证码">
+                <input type="tel" maxlength="8" placeholder="验证码" v-model="code">
               </section>
               <section class="login_hint">
                 温馨提示：未注册硅谷外卖帐号的手机号，登录时将自动注册，且代表已同意
                 <a href="javascript:;">《用户服务协议》</a>
               </section>
             </div>
-            <div>
+            <div :class="{on:loginType}">
               <section>
                 <section class="login_message">
-                  <input type="tel" maxlength="11" placeholder="手机/邮箱/用户名">
+                  <input type="tel" maxlength="11" placeholder="手机/邮箱/用户名" v-model="name">
                 </section>
                 <section class="login_verification">
-                  <input type="tel" maxlength="8" placeholder="密码">
-                  <div class="switch_button off">
-                    <div class="switch_circle"></div>
-                    <span class="switch_text">...</span>
+                  <input type="password" maxlength="16" placeholder="密码" v-model="pwd" v-if="!showPwd">
+                  <input type="text" maxlength="16" placeholder="密码" v-model="pwd" v-else>
+                  <div class="switch_button" @click="showPwd=!showPwd" :class="showPwd ? 'on' : 'off'">
+                    <div class="switch_circle" :class="{right:showPwd}"></div>
+                    <span class="switch_text">{{showPwd ? 'abc' : ''}}</span>
                   </div>
                 </section>
                 <section class="login_message">
-                  <input type="text" maxlength="11" placeholder="验证码">
+                  <input type="text" maxlength="11" placeholder="验证码" v-model="captcha">
                   <img class="get_verification" src="./images/captcha.svg" alt="captcha">
                 </section>
               </section>
@@ -49,12 +51,80 @@
           <i class="iconfont icon-jiantou2"></i>
         </a>
       </div>
+      <AlertTip @closeTip="closeTip" :alertText='alertText' v-show="showAlert"></AlertTip>
     </section>
 </template>
 
 <script>
+import AlertTip from '../../components/AlertTip/AlertTip.vue'
 export default {
-
+  data(){
+    return{
+      loginType:false,   //true为密码登陆   false为短信登陆
+      phone:'',
+      codeTime:0,
+      showPwd:false,
+      pwd:'',
+      code:'',
+      name:'',
+      captcha:'',
+      alertText:'',
+      showAlert:false
+    }
+  },
+  components:{
+    AlertTip
+  },
+  computed:{
+    phonebl(){
+      return /^1\d{10}$/.test(this.phone);
+    }
+  },
+  methods:{
+    getCode(){
+      if (!this.codeTime) {
+        this.codeTime=40;
+        let t = setInterval(() => {
+          this.codeTime--
+          if (this.codeTime<=0) {
+            clearInterval(t)
+          }
+        }, 1000);
+      }
+    },
+    alertShow(alertText){
+      this.showAlert=true;
+      this.alertText=alertText
+    },
+    closeTip(){
+      this.showAlert=false;
+      this.alertText=''
+    },
+    login(){
+      if (!this.loginType) {//短信登陆
+        const {phonebl,phone,code} = this;
+        if (!this.phonebl) {
+          // 手机号输入不正确
+          this.alertShow('手机号输入不正确')
+        }else if (!/^\d{6}$/.test(code)) {
+          // 验证码不正确
+          this.alertShow('验证码不正确')
+        }
+      } else {//密码登陆
+        const {name,pwd,captcha}=this;
+        if (!name) {
+          // 用户名不正确
+          this.alertShow('用户名不正确')
+        }else if (!pwd) {
+          // 密码不正确
+          this.alertShow('密码不正确')
+        }else if (!captcha) {
+          // 验证码不正确
+          this.alertShow('验证码不正确')
+        }
+      }
+    }
+  }
 }
 </script>
 
@@ -119,6 +189,8 @@ export default {
                 color #ccc
                 font-size 14px
                 background transparent
+                &.phoneBl
+                  color #000000
             .login_verification
               position relative
               margin-top 16px
@@ -158,6 +230,8 @@ export default {
                   background #fff
                   box-shadow 0 2px 4px 0 rgba(0,0,0,.1)
                   transition transform .3s
+                  &.right
+                    transform translateX(30px)
             .login_hint
               margin-top 12px
               color #999
